@@ -74,9 +74,6 @@ body::before{
 </head>
 <body>
 
-
-
-
 <div id="world"></div>
 
 <div id="uploadUI">
@@ -105,15 +102,32 @@ const fileInput = document.getElementById("fileInput");
 fileInput.addEventListener("change", e => {
   const file = e.target.files[0];
   if(!file) return;
+
   const reader = new FileReader();
 
   reader.onload = () => {
-    // ✅ Remove white background before saving
-    removeBackground(reader.result).then(processed => {
-      const id = Date.now();
-      db.ref("drawings/" + id).set({ img: processed });
-      fileInput.value = "";
-    });
+    const img = new Image();
+    img.src = reader.result;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const maxWidth = 800;
+      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const optimizedData = canvas.toDataURL("image/png");
+
+      removeBackground(optimizedData).then(processed => {
+        const id = Date.now();
+        db.ref("drawings/" + id).set({ img: processed });
+        fileInput.value = "";
+      });
+    };
   };
 
   reader.readAsDataURL(file);
@@ -198,14 +212,11 @@ function animate(el){
 // 🔥 Firebase Listener
 const characters = {};
 
-
 db.ref("drawings").on("child_added", snap => {
   const id = snap.key;
   const data = snap.val();
   characters[id] = data;
   renderCharacter(id,data);
-  
-  
 
   const keys = Object.keys(characters);
   if(keys.length > 20){
