@@ -137,6 +137,7 @@ fileInput.addEventListener("change", e => {
 // 🖼 Background Removal (Improved Stronger Version)
 // 🖼 Background Removal (Smart Border Flood Fill - Keeps White Inside Design)
 // 🖼 Background Removal (Improved – Better Border Detection)
+// 🖼 Background Removal (Stronger + Cleaner)
 function removeBackground(imageSrc){
   return new Promise(resolve => {
     const img = new Image();
@@ -158,56 +159,54 @@ function removeBackground(imageSrc){
       const visited = new Uint8Array(width * height);
       const stack = [];
 
-      function isNearWhite(i){
+      function isBackground(i){
         const r = data[i];
         const g = data[i+1];
         const b = data[i+2];
 
+        // Stronger detection for camera paper
         const distance = Math.sqrt(
           Math.pow(255 - r,2) +
           Math.pow(255 - g,2) +
           Math.pow(255 - b,2)
         );
 
-        return distance < 100; // 🔥 slightly stronger threshold
+        const brightness = (r + g + b) / 3;
+
+        return distance < 120 || brightness > 210;
       }
 
-      function pushIfBackground(x,y){
+      function push(x,y){
         if(x < 0 || y < 0 || x >= width || y >= height) return;
         const index = y * width + x;
         if(visited[index]) return;
 
         const i = index * 4;
-        if(isNearWhite(i)){
+        if(isBackground(i)){
           visited[index] = 1;
           stack.push([x,y]);
         }
       }
 
-      // 🔥 Flood fill from entire image border (not just 4 corners)
+      // Flood fill from full border
       for(let x=0;x<width;x++){
-        pushIfBackground(x,0);
-        pushIfBackground(x,height-1);
+        push(x,0);
+        push(x,height-1);
       }
       for(let y=0;y<height;y++){
-        pushIfBackground(0,y);
-        pushIfBackground(width-1,y);
+        push(0,y);
+        push(width-1,y);
       }
 
       while(stack.length){
         const [cx,cy] = stack.pop();
-
-        const neighbors = [
-          [cx+1,cy],[cx-1,cy],
-          [cx,cy+1],[cx,cy-1]
-        ];
-
-        for(const [nx,ny] of neighbors){
-          pushIfBackground(nx,ny);
-        }
+        push(cx+1,cy);
+        push(cx-1,cy);
+        push(cx,cy+1);
+        push(cx,cy-1);
       }
 
-      // ✅ Remove detected background
+      // Remove detected background
       for(let y=0;y<height;y++){
         for(let x=0;x<width;x++){
           const index = y * width + x;
@@ -215,6 +214,13 @@ function removeBackground(imageSrc){
             const i = index * 4;
             data[i+3] = 0;
           }
+        }
+      }
+
+      // 🔥 Extra cleanup pass — remove remaining semi-transparent white pixels
+      for(let i=0;i<data.length;i+=4){
+        if(data[i+3] < 20){
+          data[i+3] = 0;
         }
       }
 
