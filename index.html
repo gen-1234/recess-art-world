@@ -136,6 +136,7 @@ fileInput.addEventListener("change", e => {
 // 🖼 Background Removal (Improved - Better for Camera Photos)
 // 🖼 Background Removal (Improved Stronger Version)
 // 🖼 Background Removal (Smart Border Flood Fill - Keeps White Inside Design)
+// 🖼 Background Removal (Improved – Better Border Detection)
 function removeBackground(imageSrc){
   return new Promise(resolve => {
     const img = new Image();
@@ -154,38 +155,44 @@ function removeBackground(imageSrc){
       const width = canvas.width;
       const height = canvas.height;
 
-      // ✅ Flood fill from corners to detect background
       const visited = new Uint8Array(width * height);
       const stack = [];
 
-      function pushIfBackground(x,y){
-        if(x < 0 || y < 0 || x >= width || y >= height) return;
-        const index = (y * width + x);
-        if(visited[index]) return;
-
-        const i = index * 4;
+      function isNearWhite(i){
         const r = data[i];
         const g = data[i+1];
         const b = data[i+2];
 
-        // Detect near-white background
         const distance = Math.sqrt(
           Math.pow(255 - r,2) +
           Math.pow(255 - g,2) +
           Math.pow(255 - b,2)
         );
 
-        if(distance < 80){
+        return distance < 100; // 🔥 slightly stronger threshold
+      }
+
+      function pushIfBackground(x,y){
+        if(x < 0 || y < 0 || x >= width || y >= height) return;
+        const index = y * width + x;
+        if(visited[index]) return;
+
+        const i = index * 4;
+        if(isNearWhite(i)){
           visited[index] = 1;
           stack.push([x,y]);
         }
       }
 
-      // Start flood fill from 4 image corners
-      pushIfBackground(0,0);
-      pushIfBackground(width-1,0);
-      pushIfBackground(0,height-1);
-      pushIfBackground(width-1,height-1);
+      // 🔥 Flood fill from entire image border (not just 4 corners)
+      for(let x=0;x<width;x++){
+        pushIfBackground(x,0);
+        pushIfBackground(x,height-1);
+      }
+      for(let y=0;y<height;y++){
+        pushIfBackground(0,y);
+        pushIfBackground(width-1,y);
+      }
 
       while(stack.length){
         const [cx,cy] = stack.pop();
@@ -200,7 +207,7 @@ function removeBackground(imageSrc){
         }
       }
 
-      // ✅ Make detected background transparent
+      // ✅ Remove detected background
       for(let y=0;y<height;y++){
         for(let x=0;x<width;x++){
           const index = y * width + x;
