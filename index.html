@@ -20,7 +20,7 @@ body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;backg
 <div id="world"></div>
 <div id="uploadUI">
 <label for="fileInput" class="upload-btn">✨ Add Artwork</label>
-<input type="file" id="fileInput" accept="image/*" hidden>
+<input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
 <button id="clearBtn" class="upload-btn" style="background:#ff6b6b;color:white;">🧹 Clear All</button>
 </div>
 <script>
@@ -30,6 +30,9 @@ if(!firebase.apps.length){firebase.initializeApp(firebaseConfig);}
 const db=firebase.database();
 const world=document.getElementById("world");
 const fileInput=document.getElementById("fileInput");
+const uploadLabel=document.querySelector("label[for='fileInput']");
+if(uploadLabel){uploadLabel.addEventListener("click",()=>{fileInput.click();});}
+
 const clearBtn=document.getElementById("clearBtn");
 const adminPassword="1234";
 const characters={};
