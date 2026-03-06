@@ -138,6 +138,7 @@ fileInput.addEventListener("change", e => {
 // 🖼 Background Removal (Smart Border Flood Fill - Keeps White Inside Design)
 // 🖼 Background Removal (Improved – Better Border Detection)
 // 🖼 Background Removal (Stronger + Cleaner)
+// 🖼 Background Removal (Improved for Shadows & Grey Lighting)
 function removeBackground(imageSrc){
   return new Promise(resolve => {
     const img = new Image();
@@ -164,7 +165,7 @@ function removeBackground(imageSrc){
         const g = data[i+1];
         const b = data[i+2];
 
-        // Stronger detection for camera paper
+        // Improved detection — handles grey & shadow better
         const distance = Math.sqrt(
           Math.pow(255 - r,2) +
           Math.pow(255 - g,2) +
@@ -172,8 +173,10 @@ function removeBackground(imageSrc){
         );
 
         const brightness = (r + g + b) / 3;
+        const saturation = (Math.max(r,g,b) - Math.min(r,g,b));
 
-        return distance < 120 || brightness > 210;
+        // 🔥 More aggressive for camera lighting
+        return distance < 150 && brightness > 180 && saturation < 80;
       }
 
       function push(x,y){
@@ -217,9 +220,9 @@ function removeBackground(imageSrc){
         }
       }
 
-      // 🔥 Extra cleanup pass — remove remaining semi-transparent white pixels
+      // Extra cleanup
       for(let i=0;i<data.length;i+=4){
-        if(data[i+3] < 20){
+        if(data[i+3] < 10){
           data[i+3] = 0;
         }
       }
